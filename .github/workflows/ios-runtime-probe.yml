@@ -81,6 +81,11 @@ jobs:
           EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP_PATH/Info.plist")
           test -n "$EXECUTABLE"
           test -f "$APP_PATH/$EXECUTABLE"
+          # CMake's Xcode generator did not emit CFBundleIdentifier in this target's plist.
+          # Add the stable app identifier before packaging if it is absent.
+          if ! /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist" >/dev/null 2>&1; then
+            /usr/libexec/PlistBuddy -c 'Add :CFBundleIdentifier string com.jesseb342.psxrecomp' "$APP_PATH/Info.plist"
+          fi
           /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist"
           mkdir -p Payload
           cp -R "$APP_PATH" Payload/
