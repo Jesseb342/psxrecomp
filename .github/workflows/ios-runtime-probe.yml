@@ -59,8 +59,6 @@ jobs:
             -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO \
             -DCMAKE_BUILD_TYPE=Release \
             -DPSX_SDL3_FETCH=ON \
-            -DCMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER=com.jesseb342.psxrecomp \
-            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
             -DPSX_ENABLE_VULKAN=OFF \
             -DPSX_RECOMP_UI=OFF \
             -DPSX_NETPLAY=OFF \
@@ -73,6 +71,31 @@ jobs:
           set -o pipefail
           cmake --build build-ios --config Release --target psx-runtime --parallel 3 \
             2>&1 | tee ios-build.log
+
+      - name: Package unsigned iOS IPA
+        run: |
+          set -euo pipefail
+          APP_PATH="build-ios/Release-iphoneos/PSXRecomp.app"
+          test -d "$APP_PATH"
+          test -f "$APP_PATH/Info.plist"
+          EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP_PATH/Info.plist")
+          test -n "$EXECUTABLE"
+          test -f "$APP_PATH/$EXECUTABLE"
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist"
+          mkdir -p Payload
+          cp -R "$APP_PATH" Payload/
+          /usr/bin/zip -qry PSXRecomp-unsigned.ipa Payload
+          test -s PSXRecomp-unsigned.ipa
+          /usr/bin/unzip -l PSXRecomp-unsigned.ipa | grep -F 'Payload/PSXRecomp.app/Info.plist'
+          ls -lh PSXRecomp-unsigned.ipa
+
+      - name: Upload unsigned iOS IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: psxrecomp-unsigned-ipa
+          path: PSXRecomp-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Save build diagnostics
         if: always()
