@@ -11727,6 +11727,13 @@ namespace {
         const fs::path script = root / "tools" / "prepare_disc.py";
         const fs::path out_dir = root / "motk";
         fs::create_directories(out_dir, ec);
+#if defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+        if (err_msg && err_cap)
+            std::snprintf(err_msg, err_cap,
+                          "Raw disc-dump preparation is not available on iOS yet. "
+                          "Select a prepared .cue/.bin disc image instead.");
+        return 0;
+#else
         /* Prefer python3; fall back to python (Windows). */
         const char* py = "python3";
 #if defined(_WIN32)
@@ -11745,6 +11752,7 @@ namespace {
         }
 #else
         int rc = std::system(cmd.c_str());
+#endif
 #endif
         if (rc != 0) {
             if (err_msg && err_cap)
