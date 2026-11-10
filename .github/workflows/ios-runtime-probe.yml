@@ -59,6 +59,8 @@ jobs:
             -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_REQUIRED=NO \
             -DCMAKE_BUILD_TYPE=Release \
             -DPSX_SDL3_FETCH=ON \
+            -DCMAKE_XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER=com.jesseb342.psxrecomp \
+            -DCMAKE_XCODE_ATTRIBUTE_CODE_SIGNING_ALLOWED=NO \
             -DPSX_ENABLE_VULKAN=OFF \
             -DPSX_RECOMP_UI=OFF \
             -DPSX_NETPLAY=OFF \
