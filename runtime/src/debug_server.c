@@ -83,6 +83,10 @@
 #include <stdarg.h>
 #include <stdint.h>
 
+#ifndef _WIN32
+#include <sys/stat.h>  /* mkdir — avoid shelling out on iOS and other POSIX hosts */
+#endif
+
 #if defined(_MSC_VER)
 /* MSVC's three-argument reentrant tokenizer is named strtok_s. */
 #  define strtok_r strtok_s
@@ -15538,11 +15542,12 @@ static void handle_overlay_dump(int id, const char *json)
     uint32_t lo_phys = lo_buf[0] ? (uint32_t)strtoul(lo_buf, NULL, 0) : 0x00098000u;
     if (!dir_buf[0]) strncpy(dir_buf, "overlays", sizeof(dir_buf) - 1);
 
-    /* Create output directory (best-effort). */
+    /* Create output directory (best-effort). Avoid system(): iOS does not
+       expose shell execution, and mkdir is sufficient for this single level. */
 #ifdef _WIN32
     { char cmd[600]; snprintf(cmd, sizeof(cmd), "mkdir \"%s\" 2>nul", dir_buf); system(cmd); }
 #else
-    { char cmd[600]; snprintf(cmd, sizeof(cmd), "mkdir -p \"%s\"", dir_buf); system(cmd); }
+    (void)mkdir(dir_buf, 0777);
 #endif
 
     uint8_t *ram      = memory_get_ram_ptr();
