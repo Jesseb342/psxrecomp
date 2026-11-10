@@ -81,6 +81,14 @@ jobs:
           EXECUTABLE=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP_PATH/Info.plist")
           test -n "$EXECUTABLE"
           test -f "$APP_PATH/$EXECUTABLE"
+          # The runtime resolves OpenBIOS relative to the executable. Bundle the
+          # redistributable image and its required MIT notice inside the app.
+          test -s bios/openbios.bin
+          test -s bios/OpenBIOS.LICENSE
+          mkdir -p "$APP_PATH/bios"
+          install -m 0644 bios/openbios.bin "$APP_PATH/bios/openbios.bin"
+          install -m 0644 bios/OpenBIOS.LICENSE "$APP_PATH/bios/OpenBIOS.LICENSE"
+          test -s "$APP_PATH/bios/openbios.bin"
           # CMake's Xcode generator did not emit CFBundleIdentifier in this target's plist.
           # Add the stable app identifier before packaging if it is absent.
           if ! /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist" >/dev/null 2>&1; then
@@ -92,6 +100,8 @@ jobs:
           /usr/bin/zip -qry PSXRecomp-unsigned.ipa Payload
           test -s PSXRecomp-unsigned.ipa
           /usr/bin/unzip -l PSXRecomp-unsigned.ipa | grep -F 'Payload/PSXRecomp.app/Info.plist'
+          /usr/bin/unzip -l PSXRecomp-unsigned.ipa | grep -F 'Payload/PSXRecomp.app/bios/openbios.bin'
+          /usr/bin/unzip -l PSXRecomp-unsigned.ipa | grep -F 'Payload/PSXRecomp.app/bios/OpenBIOS.LICENSE'
           ls -lh PSXRecomp-unsigned.ipa
 
       - name: Upload unsigned iOS IPA
