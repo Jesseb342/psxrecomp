@@ -2415,6 +2415,11 @@ function(psxrecomp_add_runtime_target target)
         if(CMAKE_DL_LIBS)
             target_link_libraries(${target} PRIVATE ${CMAKE_DL_LIBS})
         endif()
+        if(APPLE AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
+            # iOS exposes OpenGL ES through the OpenGLES framework, not desktop OpenGL.
+            find_library(PSX_OPENGLES_LIBRARY OpenGLES REQUIRED)
+            target_link_libraries(${target} PRIVATE "${PSX_OPENGLES_LIBRARY}")
+        else()
         # GL for gpu_gl_renderer.c. Do NOT hardcode OpenGL::GL: FindOpenGL
         # reports OpenGL as found on a GLVND host that has libOpenGL.so but no
         # legacy libGL.so / glx.h (Steam Deck), yet never creates that target —
@@ -2439,6 +2444,7 @@ function(psxrecomp_add_runtime_target target)
             elseif(OPENGL_opengl_LIBRARY)
                 target_link_libraries(${target} PRIVATE "${OPENGL_opengl_LIBRARY}")
             endif()
+        endif()
         endif()
         # The overlay autocompile watcher (autocompile.c), the debug server and
         # the lobby client all use pthread on Unix.
