@@ -105,7 +105,16 @@
 #include "host_deadline.h"
 
 #include "psx_sdl.h"
-#if defined(PSX_SDL3)
+/*
+ * SDL's desktop OpenGL headers intentionally do not expose GL types for iOS.
+ * The iOS runtime uses Apple's OpenGL ES 3 API (the renderer needs ES 3
+ * integer textures and framebuffer features), while desktop builds retain
+ * SDL's platform-selected OpenGL headers.
+ */
+#if defined(__APPLE__) && defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+#include <OpenGLES/ES3/gl.h>
+#include <OpenGLES/ES3/glext.h>
+#elif defined(PSX_SDL3)
 #include <SDL3/SDL_opengl.h>
 #else
 #include <SDL_opengl.h>
