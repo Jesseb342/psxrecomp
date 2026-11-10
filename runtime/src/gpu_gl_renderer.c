@@ -163,6 +163,11 @@ static uint64_t s_fg_flips;   /* frame generation (below): game frames seen */
 #define PSXGL_PACK_ROW_LENGTH       0x0D02
 #define PSXGL_SRC1_ALPHA            0x8589
 
+#if defined(__APPLE__) && defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+/* OpenGL ES spells the depth clear entry point with a float suffix. */
+#define glClearDepth(depth) glClearDepthf((GLfloat)(depth))
+#endif
+
 #ifndef APIENTRY
 #define APIENTRY
 #endif
@@ -9307,6 +9312,7 @@ static void stereo_dump(const StereoPair *p) {
     uint8_t *sbs = (uint8_t *)malloc(n * 2u);
     char path[512]; FILE *f;
     if (!rgb || !sbs) { free(rgb); free(sbs); return; }
+#if !defined(__APPLE__) || !defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     for (int eye = 0; eye < 2; eye++) {
         glBindTexture(GL_TEXTURE_2D, p->tex[eye]);
@@ -9324,6 +9330,7 @@ static void stereo_dump(const StereoPair *p) {
              (unsigned long long)p->id);
     f = fopen(path, "wb");
     if (f) { (void)png_write_rgb(f, sbs, w * 2u, h); fclose(f); }
+#endif
     if (s_stereo_capture_count < STEREO_CAPTURE_MAX) {
         GLRenderStereoCapture *record = &s_stereo_captures[s_stereo_capture_count++];
         record->pair_id = p->id; record->guest_cycle = p->cycle;
@@ -9832,6 +9839,11 @@ void gl_renderer_pass_dump_arm(const char *dir, int generations) {
     s_pdump_left = generations;
 }
 static void pass_dump_generation(int gi) {
+#if defined(__APPLE__) && defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+    /* Texture readback via glGetTexImage is desktop-only; this is diagnostics. */
+    (void)gi;
+    return;
+#else
     PassGen *g = &s_pgen[gi];
     size_t n = (size_t)g->tex_w * (size_t)g->tex_h * 3u;
     uint8_t *rgb = (uint8_t *)malloc(n);
@@ -9852,6 +9864,7 @@ static void pass_dump_generation(int gi) {
     free(rgb);
     s_pdump_gen++;
     s_pdump_left--;
+#endif
 }
 
 static void pass_apply_promotion(void) {
@@ -10240,6 +10253,10 @@ static int pt_begin(void) {
     /* The slots stand in for the window's back buffer: same channels, so
      * destination alpha and readbacks behave as they did there. */
     {
+#if defined(__APPLE__) && defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+        /* GLES default framebuffer has no GL_BACK_LEFT attachment selector. */
+        s_pt_format = GL_RGBA8;
+#else
         GLint a = 8;
         typedef void (APIENTRY *PFN_gfap)(GLenum, GLenum, GLenum, GLint *);
         PFN_gfap gfap = (PFN_gfap)SDL_GL_GetProcAddress("glGetFramebufferAttachmentParameteriv");
@@ -10248,6 +10265,7 @@ static int pt_begin(void) {
         if (gfap) gfap(PSXGL_FRAMEBUFFER, GL_BACK_LEFT, 0x8215 /* ALPHA_SIZE */, &a);
         if (glGetError() != GL_NO_ERROR) a = 8;
         s_pt_format = a > 0 ? GL_RGBA8 : GL_RGB8;
+#endif
     }
     SDL_GL_SetAttribute(SDL_GL_SHARE_WITH_CURRENT_CONTEXT, 1);
     s_pt_ctx = SDL_GL_CreateContext(s_win);
