@@ -105,6 +105,13 @@
 #include "host_deadline.h"
 
 #include "psx_sdl.h"
+/* SDL's desktop OpenGL header does not provide GL scalar types on iOS.
+ * Include the Apple OpenGL ES declarations so this translation unit can be
+ * compiled while the iOS renderer path is being brought up. */
+#if defined(__APPLE__) && defined(__MACH__) && defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+#include <OpenGLES/ES2/gl.h>
+#include <OpenGLES/ES2/glext.h>
+#endif
 #if defined(PSX_SDL3)
 #include <SDL3/SDL_opengl.h>
 #else
