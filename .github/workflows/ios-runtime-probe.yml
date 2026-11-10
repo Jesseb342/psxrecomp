@@ -38,17 +38,16 @@ jobs:
           s, n = re.subn(pattern, replacement, s, count=1)
           if n != 1:
               raise SystemExit("Could not patch launcher GLES renderer selection")
-          old = '''    elseif(WIN32)
-              # ws2_32:'''
-          new = '''    elseif(APPLE AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
-              find_library(RUI_OPENGLES_LIBRARY OpenGLES REQUIRED)
-              target_link_libraries(${TGT} PRIVATE
-                  ${RUI_OPENGLES_LIBRARY} ${CMAKE_DL_LIBS})
-          elseif(WIN32)
-              # ws2_32:'''
-          if old not in s:
+          pattern = r'(?m)^    elseif\\(WIN32\\)\\n        # ws2_32:'
+          replacement = '''    elseif(APPLE AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
+                  find_library(RUI_OPENGLES_LIBRARY OpenGLES REQUIRED)
+                  target_link_libraries(${TGT} PRIVATE
+                      ${RUI_OPENGLES_LIBRARY} ${CMAKE_DL_LIBS})
+              elseif(WIN32)
+                  # ws2_32:'''
+          s, n = re.subn(pattern, replacement, s, count=1)
+          if n != 1:
               raise SystemExit("Could not patch launcher iOS OpenGLES link branch")
-          s = s.replace(old, new, 1)
           p.write_text(s)
           print("Patched recomp-ui to use OpenGLES on iOS")
           PY
