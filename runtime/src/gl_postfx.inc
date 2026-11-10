@@ -247,10 +247,17 @@ static GLuint pfx_surface_rb(GLuint fbo) {
 static void pfx_rect_px(GLuint tex, float tex_w, float tex_h, int x, int y, int w, int h, int out[4],
                         int *out_tw, int *out_th) {
     GLint tw = 0, th = 0;
+#if defined(__APPLE__) && defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+    /* GLES omits glGetTexLevelParameteriv. These arguments are the surface's
+       native dimensions; the iOS path uses them as the texture dimensions. */
+    tw = (GLint)lrintf(tex_w);
+    th = (GLint)lrintf(tex_h);
+#else
     glBindTexture(GL_TEXTURE_2D, tex);
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_WIDTH, &tw);
     glGetTexLevelParameteriv(GL_TEXTURE_2D, 0, GL_TEXTURE_HEIGHT, &th);
     glBindTexture(GL_TEXTURE_2D, 0);
+#endif
     const float sx = (float)tw / tex_w, sy = (float)th / tex_h;
     *out_tw = tw; *out_th = th;
     out[0] = (int)lrintf((float)x * sx);
