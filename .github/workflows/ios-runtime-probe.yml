@@ -13,7 +13,7 @@ concurrency:
 jobs:
   ios-arm64-runtime:
     name: Compile PSX runtime for iOS ARM64
-    runs-on: macos-15
+    runs-on: macos-latest
     timeout-minutes: 90
 
     steps:
