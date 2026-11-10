@@ -26,45 +26,31 @@ jobs:
           test -f recomp-ui/recomp_ui.cmake
           python3 - <<'PY'
           from pathlib import Path
+          import re
           p = Path("recomp-ui/recomp_ui.cmake")
           s = p.read_text()
-          old = """    if(ANDROID)
+          pattern = r'(?m)^    if\(ANDROID\)\n        target_compile_definitions\(\$\{TGT\} PRIVATE\n            LNG_GLES2=1\n            IMGUI_IMPL_OPENGL_ES2=1\)\n    endif\(\)$'
+          replacement = '''    if(ANDROID OR (APPLE AND CMAKE_SYSTEM_NAME STREQUAL "iOS"))
               target_compile_definitions(${TGT} PRIVATE
                   LNG_GLES2=1
                   IMGUI_IMPL_OPENGL_ES2=1)
-          endif()
-          if(RECOMP_UI_SDL3)"""
-          new = """    if(ANDROID OR (APPLE AND CMAKE_SYSTEM_NAME STREQUAL "iOS"))
-              target_compile_definitions(${TGT} PRIVATE
-                  LNG_GLES2=1
-                  IMGUI_IMPL_OPENGL_ES2=1)
-          endif()
-          if(RECOMP_UI_SDL3)"""
-          if old not in s:
-              raise SystemExit("Could not locate recomp-ui GLES compile-definition block")
-          s = s.replace(old, new, 1)
-          old = """    if(ANDROID)
-              find_library(RUI_GLES2_LIBRARY GLESv2 REQUIRED)
-              find_library(RUI_EGL_LIBRARY EGL REQUIRED)
-              find_library(RUI_LOG_LIBRARY log REQUIRED)
-              target_link_libraries(${TGT} PRIVATE
-                  ${RUI_GLES2_LIBRARY} ${RUI_EGL_LIBRARY} ${RUI_LOG_LIBRARY})
-          elseif(WIN32)"""
-          new = """    if(ANDROID)
-              find_library(RUI_GLES2_LIBRARY GLESv2 REQUIRED)
-              find_library(RUI_EGL_LIBRARY EGL REQUIRED)
-              find_library(RUI_LOG_LIBRARY log REQUIRED)
-              target_link_libraries(${TGT} PRIVATE
-                  ${RUI_GLES2_LIBRARY} ${RUI_EGL_LIBRARY} ${RUI_LOG_LIBRARY})
-          elseif(APPLE AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
+          endif()'''
+          s, n = re.subn(pattern, replacement, s, count=1)
+          if n != 1:
+              raise SystemExit("Could not patch launcher GLES renderer selection")
+          old = '''    elseif(WIN32)
+              # ws2_32:'''
+          new = '''    elseif(APPLE AND CMAKE_SYSTEM_NAME STREQUAL "iOS")
               find_library(RUI_OPENGLES_LIBRARY OpenGLES REQUIRED)
               target_link_libraries(${TGT} PRIVATE
                   ${RUI_OPENGLES_LIBRARY} ${CMAKE_DL_LIBS})
-          elseif(WIN32)"""
+          elseif(WIN32)
+              # ws2_32:'''
           if old not in s:
-              raise SystemExit("Could not locate recomp-ui OpenGL link block")
+              raise SystemExit("Could not patch launcher iOS OpenGLES link branch")
           s = s.replace(old, new, 1)
           p.write_text(s)
+          print("Patched recomp-ui to use OpenGLES on iOS")
           PY
 
       - name: Select Xcode
