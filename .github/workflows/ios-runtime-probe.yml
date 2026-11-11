@@ -91,14 +91,13 @@ jobs:
           # iOS only provides OpenGL ES; request an ES 3.0 context there.
           p = Path("recomp-ui/src/common/launcher_platform_sdl3.c")
           s = p.read_text()
-          pattern = r"(?m)^    SDL_GL_SetAttribute\\(SDL_GL_CONTEXT_MAJOR_VERSION, 3\\);\\n    SDL_GL_SetAttribute\\(SDL_GL_CONTEXT_MINOR_VERSION, 3\\);\\n    SDL_GL_SetAttribute\\(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE\\);$"
-          replacement = "#if defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)\\n    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);\\n    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);\\n    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);\\n#else\\n    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);\\n    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);\\n    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);\\n#endif"
+          pattern = r"(?m)^    SDL_GL_SetAttribute\(SDL_GL_CONTEXT_MAJOR_VERSION, 3\);\n    SDL_GL_SetAttribute\(SDL_GL_CONTEXT_MINOR_VERSION, 3\);\n    SDL_GL_SetAttribute\(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE\);$"
+          replacement = "#if defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)\n    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);\n    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);\n    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);\n#else\n    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);\n    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);\n    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);\n#endif"
           s, n = re.subn(pattern, lambda _: replacement, s, count=1)
           if n != 1:
               raise SystemExit("Could not locate SDL3 launcher GL context attributes")
           p.write_text(s)
           print("Patched recomp-ui to use OpenGLES 3.0 contexts on iOS")
-          p.write_text(s)
           PY
 
       - name: Select Xcode
