@@ -93,7 +93,7 @@ jobs:
           s = p.read_text()
           old = """    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-              SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);"""
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);"""
           new = """#if defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
               SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
               SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
