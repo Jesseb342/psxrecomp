@@ -17730,6 +17730,15 @@ static void host_pause_service(void) {
 }
 
 int main(int argc, char** argv) {
+#if defined(PSX_SDL3)
+    /* Some iOS entry configurations reach this C main without SDL's
+     * generated entry wrapper marking the application ready. SDL_Init then
+     * fails with the misleading "did you include SDL_main.h" message.
+     * SDL_SetMainReady is the documented manual-entry-point equivalent and
+     * is harmless if SDL's wrapper already performed this step. */
+    SDL_SetMainReady();
+    std::fprintf(stderr, "psxrecomp: SDL main marked ready\n");
+#endif
 #if defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
     /* StikDebug reports a normal nonzero return without a crash report when
      * startup fails. Preserve stdout/stderr in the app's Documents folder so
