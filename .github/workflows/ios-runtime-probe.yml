@@ -113,6 +113,18 @@ jobs:
           s = s.replace(old, new, 1)
           p.write_text(s)
 
+          # iOS defaults OpenGL ES drawable color storage to RGB565. Request
+          # RGBA8 explicitly so the ImGui alpha-blended launcher uses a full
+          # 8-bit-per-channel drawable on Retina devices.
+          p = Path("recomp-ui/src/common/launcher_platform_sdl3.c")
+          s = p.read_text()
+          old = "    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);"
+          new = old + chr(10) + "#if defined(__APPLE__)" + chr(10) + "    SDL_GL_SetAttribute(SDL_GL_RED_SIZE, 8);" + chr(10) + "    SDL_GL_SetAttribute(SDL_GL_GREEN_SIZE, 8);" + chr(10) + "    SDL_GL_SetAttribute(SDL_GL_BLUE_SIZE, 8);" + chr(10) + "    SDL_GL_SetAttribute(SDL_GL_ALPHA_SIZE, 8);" + chr(10) + "#endif"
+          if s.count(old) != 1:
+              raise SystemExit("Could not locate SDL3 iOS GL color-buffer attributes")
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+
           # Add StikDebug checkpoints through window creation and first frame.
           p = Path("recomp-ui/src/common/launcher_platform_sdl3.c")
           s = p.read_text()
@@ -283,6 +295,12 @@ jobs:
           # Add the iOS indirect-input capability requested by SDL3.
           if ! /usr/libexec/PlistBuddy -c 'Print :UIApplicationSupportsIndirectInputEvents' "$APP_PATH/Info.plist" >/dev/null 2>&1; then
             /usr/libexec/PlistBuddy -c 'Add :UIApplicationSupportsIndirectInputEvents bool true' "$APP_PATH/Info.plist"
+          fi
+          # Without UILaunchScreen, iOS may run the app in legacy low-resolution
+          # compatibility mode (e.g. 320x693 points on an iPhone 14), which
+          # mismatches the Retina drawable and launcher layout.
+          if ! /usr/libexec/PlistBuddy -c 'Print :UILaunchScreen' "$APP_PATH/Info.plist" >/dev/null 2>&1; then
+            /usr/libexec/PlistBuddy -c 'Add :UILaunchScreen dict' "$APP_PATH/Info.plist"
           fi
           # CMake's Xcode generator did not emit CFBundleIdentifier in this target's plist.
           # Add the stable app identifier before packaging if it is absent.
