@@ -63,6 +63,18 @@ jobs:
                   raise SystemExit("Could not locate launcher_imgui.cpp include marker")
               s = s.replace(marker, marker + chr(10) + include, 1)
               p.write_text(s)
+          # The standalone launcher GL helper also uses raw GLES calls.
+          p = Path("recomp-ui/src/common/launcher_gl.c")
+          s = p.read_text()
+          marker = '#include "launcher_gl.h"'
+          include = """#if defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+          #include <OpenGLES/ES2/gl.h>
+          #endif"""
+          if include not in s:
+              if marker not in s:
+                  raise SystemExit("Could not locate launcher_gl.c include marker")
+              s = s.replace(marker, marker + chr(10) + include, 1)
+              p.write_text(s)
           print("Patched recomp-ui to use OpenGLES on iOS")
           PY
 
