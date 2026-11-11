@@ -206,6 +206,36 @@ jobs:
             -DBUILD_TESTING=OFF \
             2>&1 | tee ios-configure.log
 
+      - name: Instrument UIKit OpenGL presentation
+        run: |
+          set -euo pipefail
+          SDL_VIEW="$(find build-ios -type f -path '*/src/video/uikit/SDL_uikitopenglview.m' -print -quit)"
+          if [ -z "$SDL_VIEW" ]; then
+            echo "::error::Could not locate SDL UIKit OpenGL view source after CMake configure"
+            find build-ios -iname '*uikit*opengl*' -print || true
+            exit 1
+          fi
+          python3 - "$SDL_VIEW" <<'PY'
+          from pathlib import Path
+          import sys
+          p = Path(sys.argv[1])
+          s = p.read_text()
+          old = '[context presentRenderbuffer:GL_RENDERBUFFER];'
+          new = '''BOOL psx_present_ok = [context presentRenderbuffer:GL_RENDERBUFFER];
+              fprintf(stderr, "[psxdiag] uikit_present result=%d view_window=%d hidden=%d alpha=%.2f frame=%.1fx%.1f bounds=%.1fx%.1f app_state=%ld\\n",
+                  psx_present_ok ? 1 : 0, self.window != nil, self.hidden ? 1 : 0, self.alpha,
+                  self.frame.size.width, self.frame.size.height, self.bounds.size.width, self.bounds.size.height,
+                  (long)[UIApplication sharedApplication].applicationState);
+              fflush(stderr);'''
+          if s.count(old) != 1:
+              raise SystemExit(f"Expected one UIKit present call, found {s.count(old)}")
+          s = s.replace(old, new, 1)
+          if '#include <stdio.h>' not in s:
+              s = s.replace('#include "SDL_internal.h"', '#include "SDL_internal.h"\\n#include <stdio.h>', 1)
+          p.write_text(s)
+          print(f"Instrumented UIKit presentRenderbuffer in {p}")
+          PY
+
       - name: Compile iOS runtime
         run: |
           set -o pipefail
