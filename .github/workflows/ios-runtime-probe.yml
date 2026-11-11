@@ -61,7 +61,7 @@ jobs:
           if include not in s:
               if marker not in s:
                   raise SystemExit("Could not locate launcher_imgui.cpp include marker")
-              s = s.replace(marker, marker + "\\n" + include, 1)
+              s = s.replace(marker, marker + chr(10) + include, 1)
               p.write_text(s)
           print("Patched recomp-ui to use OpenGLES on iOS")
           PY
