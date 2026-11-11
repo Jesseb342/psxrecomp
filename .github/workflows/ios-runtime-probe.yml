@@ -296,12 +296,15 @@ jobs:
           if ! /usr/libexec/PlistBuddy -c 'Print :UIApplicationSupportsIndirectInputEvents' "$APP_PATH/Info.plist" >/dev/null 2>&1; then
             /usr/libexec/PlistBuddy -c 'Add :UIApplicationSupportsIndirectInputEvents bool true' "$APP_PATH/Info.plist"
           fi
-          # Without UILaunchScreen, iOS may run the app in legacy low-resolution
-          # compatibility mode (e.g. 320x693 points on an iPhone 14), which
-          # mismatches the Retina drawable and launcher layout.
-          if ! /usr/libexec/PlistBuddy -c 'Print :UILaunchScreen' "$APP_PATH/Info.plist" >/dev/null 2>&1; then
-            /usr/libexec/PlistBuddy -c 'Add :UILaunchScreen dict' "$APP_PATH/Info.plist"
-          fi
+          # iOS/SDL require a valid launch-screen configuration to avoid legacy
+          # compatibility sizing. Replace the key unconditionally: merely checking
+          # that it exists can preserve a malformed non-dictionary value.
+          /usr/libexec/PlistBuddy -c 'Delete :UILaunchScreen' "$APP_PATH/Info.plist" >/dev/null 2>&1 || true
+          /usr/libexec/PlistBuddy -c 'Add :UILaunchScreen dict' "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :UILaunchScreen' "$APP_PATH/Info.plist"
+          plutil -lint "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :UIDeviceFamily' "$APP_PATH/Info.plist"
+          /usr/libexec/PlistBuddy -c 'Print :UILaunchScreen' "$APP_PATH/Info.plist" | grep -q 'Dict'
           # CMake's Xcode generator did not emit CFBundleIdentifier in this target's plist.
           # Add the stable app identifier before packaging if it is absent.
           if ! /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist" >/dev/null 2>&1; then
@@ -319,6 +322,12 @@ jobs:
           cp -R "$APP_PATH" Payload/
           /usr/bin/zip -qry PSXRecomp-unsigned.ipa Payload
           test -s PSXRecomp-unsigned.ipa
+          # Verify the archived app plist, not only the pre-archive build tree.
+          mkdir -p ipa-verify
+          /usr/bin/unzip -q PSXRecomp-unsigned.ipa 'Payload/PSXRecomp.app/Info.plist' -d ipa-verify
+          plutil -lint ipa-verify/Payload/PSXRecomp.app/Info.plist
+          /usr/libexec/PlistBuddy -c 'Print :UILaunchScreen' ipa-verify/Payload/PSXRecomp.app/Info.plist | grep -q 'Dict'
+          /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' ipa-verify/Payload/PSXRecomp.app/Info.plist
           /usr/bin/unzip -l PSXRecomp-unsigned.ipa | grep -F 'Payload/PSXRecomp.app/Info.plist'
           /usr/bin/unzip -l PSXRecomp-unsigned.ipa | grep -F 'Payload/PSXRecomp.app/bios/openbios.bin'
           /usr/bin/unzip -l PSXRecomp-unsigned.ipa | grep -F 'Payload/PSXRecomp.app/bios/OpenBIOS.LICENSE'
