@@ -11727,6 +11727,7 @@ namespace {
         const fs::path script = root / "tools" / "prepare_disc.py";
         const fs::path out_dir = root / "motk";
         fs::create_directories(out_dir, ec);
+        int rc = -1;
 #if defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
         if (err_msg && err_cap)
             std::snprintf(err_msg, err_cap,
@@ -11744,7 +11745,7 @@ namespace {
                           source_path + "\" --out-dir \"" + out_dir.string() + "\"";
 #if !defined(_WIN32)
         /* If python3 missing, retry with python. */
-        int rc = std::system(cmd.c_str());
+        rc = std::system(cmd.c_str());
         if (rc != 0) {
             cmd = std::string("python \"") + script.string() + "\" \"" + source_path +
                   "\" --out-dir \"" + out_dir.string() + "\"";
