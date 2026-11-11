@@ -2,6 +2,9 @@ name: iOS Runtime Build Probe
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/ios-runtime-probe.yml"
 
 permissions:
   contents: read
@@ -178,7 +181,7 @@ jobs:
           FONT_ASSET=$(find build-ios -type f -path '*/assets/fonts/LatoLatin-Regular.ttf' -print -quit)
           if [ -z "$FONT_ASSET" ]; then
             echo "::error::recomp-ui font asset was not staged by CMake"
-            find build-ios/Release-iphoneos -maxdepth 5 -type d -name assets -print || true
+            find build-ios/Release-iphoneos -type d -name assets -print || true
             exit 1
           fi
           ASSET_ROOT="${FONT_ASSET%/fonts/LatoLatin-Regular.ttf}"
