@@ -231,7 +231,7 @@ jobs:
               raise SystemExit(f"Expected one UIKit present call, found {s.count(old)}")
           s = s.replace(old, new, 1)
           if '#include <stdio.h>' not in s:
-              s = s.replace('#include "SDL_internal.h"', '#include "SDL_internal.h"\\n#include <stdio.h>', 1)
+              s = s.replace('#include "SDL_internal.h"', '#include "SDL_internal.h"' + chr(10) + '#include <stdio.h>', 1)
           p.write_text(s)
           print(f"Instrumented UIKit presentRenderbuffer in {p}")
           PY
