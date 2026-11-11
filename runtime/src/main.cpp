@@ -17730,10 +17730,30 @@ static void host_pause_service(void) {
 }
 
 int main(int argc, char** argv) {
+#if defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+    /* StikDebug reports a normal nonzero return without a crash report when
+     * startup fails. Preserve stdout/stderr in the app's Documents folder so
+     * an iOS user can retrieve the actual failure from the Files app. */
+    if (const char* home = std::getenv("HOME")) {
+        std::error_code log_ec;
+        const std::filesystem::path documents =
+            std::filesystem::path(home) / "Documents";
+        std::filesystem::create_directories(documents, log_ec);
+        if (!log_ec) {
+            const std::string log_path =
+                (documents / "psxrecomp-startup.log").string();
+            (void)std::freopen(log_path.c_str(), "a", stdout);
+            (void)std::freopen(log_path.c_str(), "a", stderr);
+        }
+    }
+#endif
     g_main_argc = argc;
     g_main_argv = argv;
     const int regional_result = PSXRecompV4::regional::startup(argc, argv);
-    if (regional_result >= 0) return regional_result;
+    if (regional_result >= 0) {
+        std::fprintf(stderr, "psxrecomp: regional startup returned %d\n", regional_result);
+        return regional_result;
+    }
     /* Force line-buffered output so messages appear even if killed. */
     std::setvbuf(stdout, nullptr, _IOLBF, BUFSIZ);
     std::setvbuf(stderr, nullptr, _IOLBF, BUFSIZ);
