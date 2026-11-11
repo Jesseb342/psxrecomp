@@ -101,6 +101,18 @@ jobs:
               raise SystemExit("Could not locate SDL3 launcher GL context attributes")
           p.write_text(s)
 
+          # iOS presents SDL OpenGL content through a fullscreen UIKit-backed
+          # drawable. A resizable desktop-style window can create a valid GLES
+          # framebuffer while leaving the iOS presentation surface black.
+          p = Path("recomp-ui/src/common/launcher_platform_sdl3.c")
+          s = p.read_text()
+          old = "    SDL_WindowFlags flags =" + chr(10) + "        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;"
+          new = "    SDL_WindowFlags flags =" + chr(10) + "#if defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)" + chr(10) + "        SDL_WINDOW_OPENGL | SDL_WINDOW_FULLSCREEN | SDL_WINDOW_HIGH_PIXEL_DENSITY;" + chr(10) + "#else" + chr(10) + "        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;" + chr(10) + "#endif"
+          if old not in s:
+              raise SystemExit("Could not locate SDL3 launcher window flags")
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+
           # Add StikDebug checkpoints through window creation and first frame.
           p = Path("recomp-ui/src/common/launcher_platform_sdl3.c")
           s = p.read_text()
