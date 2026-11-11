@@ -2385,8 +2385,14 @@ static void update_adaptive_widescreen() {
  * runtime requirements immediately before every GL window, because launcher
  * teardown resets them and macOS otherwise supplies a legacy 2.1 context. */
 static void configure_core_gl_context_attributes() {
-    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     int major = 3, minor = 3;
+    int profile = SDL_GL_CONTEXT_PROFILE_CORE;
+#if defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+    /* iOS exposes OpenGL ES, not desktop OpenGL 3.3 core. */
+    major = 3;
+    minor = 0;
+    profile = SDL_GL_CONTEXT_PROFILE_ES;
+#endif
 #if defined(PSX_OPENXR)
     /* Opt-in headset context (docs/OPENXR_RENDERING.md). Ordinary GL launches
      * keep the historic 3.3. The environment variable is PSX_OPENXR_ENABLE;
@@ -2411,6 +2417,7 @@ static void configure_core_gl_context_attributes() {
         }
     }
 #endif
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, profile);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, major);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, minor);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
