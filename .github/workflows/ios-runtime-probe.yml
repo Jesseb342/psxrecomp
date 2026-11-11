@@ -49,6 +49,20 @@ jobs:
           if n != 1:
               raise SystemExit("Could not patch launcher iOS OpenGLES link branch")
           p.write_text(s)
+          # The shared ImGui launcher calls raw GL functions directly. Its
+          # desktop GL headers are not included by the SDL compatibility layer
+          # on iOS, so explicitly include the OpenGLES 2 declarations.
+          p = Path("recomp-ui/src/common/backends/imgui/launcher_imgui.cpp")
+          s = p.read_text()
+          marker = '#include "launcher_mod_integer.h"'
+          include = """#if defined(__APPLE__) && defined(TARGET_OS_IPHONE)
+          #include <OpenGLES/ES2/gl.h>
+          #endif"""
+          if include not in s:
+              if marker not in s:
+                  raise SystemExit("Could not locate launcher_imgui.cpp include marker")
+              s = s.replace(marker, marker + "\\n" + include, 1)
+              p.write_text(s)
           print("Patched recomp-ui to use OpenGLES on iOS")
           PY
 
