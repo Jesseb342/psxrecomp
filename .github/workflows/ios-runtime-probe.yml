@@ -171,6 +171,31 @@ jobs:
           install -m 0644 bios/openbios.bin "$APP_PATH/bios/openbios.bin"
           install -m 0644 bios/OpenBIOS.LICENSE "$APP_PATH/bios/OpenBIOS.LICENSE"
           test -s "$APP_PATH/bios/openbios.bin"
+          # recomp-ui stages its fonts and console images beside the executable.
+          # Make sure that staged directory is actually inside the iOS app bundle:
+          # the app is relocated into its Documents container by some sideloaders,
+          # so relying on the build tree or runner working directory is unsafe.
+          FONT_ASSET=$(find build-ios -type f -path '*/assets/fonts/LatoLatin-Regular.ttf' -print -quit)
+          if [ -z "$FONT_ASSET" ]; then
+            echo "::error::recomp-ui font asset was not staged by CMake"
+            find build-ios/Release-iphoneos -maxdepth 5 -type d -name assets -print || true
+            exit 1
+          fi
+          ASSET_ROOT="${FONT_ASSET%/fonts/LatoLatin-Regular.ttf}"
+          if [ "$ASSET_ROOT" != "$APP_PATH/assets" ]; then
+            rm -rf "$APP_PATH/assets"
+            ditto "$ASSET_ROOT" "$APP_PATH/assets"
+          fi
+          test -s "$APP_PATH/assets/fonts/LatoLatin-Regular.ttf"
+          test -s "$APP_PATH/assets/fonts/LatoLatin-Bold.ttf"
+          test -s "$APP_PATH/assets/img/flags.png"
+          test -s "$APP_PATH/assets/img/pad_analog.tga"
+          echo "Verified launcher assets in app bundle:"
+          find "$APP_PATH/assets" -type f -maxdepth 3 -print | sort
+          # Add the iOS indirect-input capability requested by SDL3.
+          if ! /usr/libexec/PlistBuddy -c 'Print :UIApplicationSupportsIndirectInputEvents' "$APP_PATH/Info.plist" >/dev/null 2>&1; then
+            /usr/libexec/PlistBuddy -c 'Add :UIApplicationSupportsIndirectInputEvents bool true' "$APP_PATH/Info.plist"
+          fi
           # CMake's Xcode generator did not emit CFBundleIdentifier in this target's plist.
           # Add the stable app identifier before packaging if it is absent.
           if ! /usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP_PATH/Info.plist" >/dev/null 2>&1; then
@@ -191,6 +216,9 @@ jobs:
           /usr/bin/unzip -l PSXRecomp-unsigned.ipa | grep -F 'Payload/PSXRecomp.app/Info.plist'
           /usr/bin/unzip -l PSXRecomp-unsigned.ipa | grep -F 'Payload/PSXRecomp.app/bios/openbios.bin'
           /usr/bin/unzip -l PSXRecomp-unsigned.ipa | grep -F 'Payload/PSXRecomp.app/bios/OpenBIOS.LICENSE'
+          /usr/bin/unzip -l PSXRecomp-unsigned.ipa | grep -F 'Payload/PSXRecomp.app/assets/fonts/LatoLatin-Regular.ttf'
+          /usr/bin/unzip -l PSXRecomp-unsigned.ipa | grep -F 'Payload/PSXRecomp.app/assets/img/flags.png'
+          /usr/bin/unzip -l PSXRecomp-unsigned.ipa | grep -F 'Payload/PSXRecomp.app/assets/img/pad_analog.tga'
           ls -lh PSXRecomp-unsigned.ipa
 
       - name: Upload unsigned iOS IPA
