@@ -104,63 +104,40 @@ jobs:
           # Add StikDebug checkpoints through window creation and first frame.
           p = Path("recomp-ui/src/common/launcher_platform_sdl3.c")
           s = p.read_text()
-          old = """    SDL_GL_MakeCurrent(p->window, p->gl);
-    SDL_GL_SetSwapInterval(1);   // vsync — a launcher has no reason to spin
-"""
-          new = """    fprintf(stderr, "[psxdiag] window_created\n"); fflush(stderr);
-    if (!SDL_GL_MakeCurrent(p->window, p->gl)) {
-        fprintf(stderr, "[psxdiag] make_current_failed: %s\n", SDL_GetError()); fflush(stderr);
-        return false;
-    }
-    fprintf(stderr, "[psxdiag] gl_context_current version=%s renderer=%s\n",
-            (const char*)glGetString(GL_VERSION),
-            (const char*)glGetString(GL_RENDERER)); fflush(stderr);
-    if (!SDL_GL_SetSwapInterval(1))
-        fprintf(stderr, "[psxdiag] swap_interval_unavailable: %s\n", SDL_GetError());
-    fprintf(stderr, "[psxdiag] window_gl_ready\n"); fflush(stderr);
-"""
-          if old not in s:
-              raise SystemExit("Could not locate SDL3 GL make-current block")
-          s = s.replace(old, new, 1)
-          old = '    launcher_boot_timing_mark("rui:platform_open:begin");'
-          new = old + '\n    fprintf(stderr, "[psxdiag] platform_open_begin\n"); fflush(stderr);'
-          if old not in s:
-              raise SystemExit("Could not locate platform-open entry")
-          s = s.replace(old, new, 1)
-          old = '    launcher_boot_timing_mark("rui:platform_open:window+gl_ready");'
-          new = old + '\n    fprintf(stderr, "[psxdiag] platform_open_complete\n"); fflush(stderr);'
-          if old not in s:
-              raise SystemExit("Could not locate platform-open completion")
-          s = s.replace(old, new, 1)
+          old = "    SDL_GL_MakeCurrent(p->window, p->gl);" + chr(10) + "    SDL_GL_SetSwapInterval(1);   // vsync — a launcher has no reason to spin"
+          new_lines = [
+              "    fprintf(stderr, \"[psxdiag] window_created\"); fflush(stderr);",
+              "    if (!SDL_GL_MakeCurrent(p->window, p->gl)) { fprintf(stderr, \"[psxdiag] make_current_failed\"); fflush(stderr); return false; }",
+              "    fprintf(stderr, \"[psxdiag] gl_context_current\"); fflush(stderr);",
+              "    if (!SDL_GL_SetSwapInterval(1)) fprintf(stderr, \"[psxdiag] swap_interval_unavailable\");",
+              "    fprintf(stderr, \"[psxdiag] window_gl_ready\"); fflush(stderr);"
+          ]
+          if old not in s: raise SystemExit("Could not locate SDL3 GL make-current block")
+          s = s.replace(old, chr(10).join(new_lines), 1)
+          anchors = [
+              ("    launcher_boot_timing_mark(\"rui:platform_open:begin\");", "    fprintf(stderr, \"[psxdiag] platform_open_begin\"); fflush(stderr);"),
+              ("    launcher_boot_timing_mark(\"rui:platform_open:window+gl_ready\");", "    fprintf(stderr, \"[psxdiag] platform_open_complete\"); fflush(stderr);")
+          ]
+          for old, line in anchors:
+              if old not in s: raise SystemExit("Missing platform diagnostic anchor: " + old)
+              s = s.replace(old, old + chr(10) + line, 1)
           p.write_text(s)
-
           p = Path("recomp-ui/src/common/backends/imgui/launcher_imgui.cpp")
           s = p.read_text()
           edits = [
-              ('    launcher_boot_timing_mark("rui:backend_run:begin");',
-               '    launcher_boot_timing_mark("rui:backend_run:begin");\n    std::fprintf(stderr, "[psxdiag] backend_run_begin\n"); std::fflush(stderr);'),
-              ('    ImGui::CreateContext();',
-               '    ImGui::CreateContext();\n    std::fprintf(stderr, "[psxdiag] imgui_context_created\n"); std::fflush(stderr);'),
-              ('    LNG_ImplSDL_InitForOpenGL(p->window, p->gl);',
-               '    const bool sdl_backend_ok = LNG_ImplSDL_InitForOpenGL(p->window, p->gl);\n    std::fprintf(stderr, "[psxdiag] imgui_sdl_backend=%d\n", sdl_backend_ok ? 1 : 0); std::fflush(stderr);'),
-              ('    ImGui_ImplOpenGL3_Init("#version 100");   // GLES 2 GLSL (host ANGLE backend)',
-               '    const bool gl_backend_ok = ImGui_ImplOpenGL3_Init("#version 100");   // GLES 2 GLSL (host ANGLE backend)\n    std::fprintf(stderr, "[psxdiag] imgui_gl_backend=%d\n", gl_backend_ok ? 1 : 0); std::fflush(stderr);'),
-              ('    launcher_boot_timing_mark("rui:imgui_gl_ready");',
-               '    launcher_boot_timing_mark("rui:imgui_gl_ready");\n    std::fprintf(stderr, "[psxdiag] imgui_backends_ready\n"); std::fflush(stderr);'),
-              ('    launcher_boot_timing_mark("rui:textures_loaded");',
-               '    launcher_boot_timing_mark("rui:textures_loaded");\n    std::fprintf(stderr, "[psxdiag] textures_loaded\n"); std::fflush(stderr);'),
-              ('    while ((m->action == LNG_ACTION_NONE && !p->should_quit) ||',
-               '    std::fprintf(stderr, "[psxdiag] entering_render_loop\n"); std::fflush(stderr);\n    while ((m->action == LNG_ACTION_NONE && !p->should_quit) ||'),
-              ('        ImGui::Render();',
-               '        ImGui::Render();\n        if (!first_present_marked) { std::fprintf(stderr, "[psxdiag] first_imgui_frame_built\n"); std::fflush(stderr); }'),
-              ('        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());',
-               '        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());\n        if (!first_present_marked) { std::fprintf(stderr, "[psxdiag] first_frame_draw_submitted\n"); std::fflush(stderr); }'),
-              ('        launcher_platform_present(p);',
-               '        launcher_platform_present(p);\n        if (!first_present_marked) { std::fprintf(stderr, "[psxdiag] first_frame_presented\n"); std::fflush(stderr); }')
+              ("    launcher_boot_timing_mark(\"rui:backend_run:begin\");", "    std::fprintf(stderr, \"[psxdiag] backend_run_begin\"); std::fflush(stderr);"),
+              ("    ImGui::CreateContext();", "    std::fprintf(stderr, \"[psxdiag] imgui_context_created\"); std::fflush(stderr);"),
+              ("    LNG_ImplSDL_InitForOpenGL(p->window, p->gl);", "    const bool sdl_backend_ok = LNG_ImplSDL_InitForOpenGL(p->window, p->gl);\n    std::fprintf(stderr, \"[psxdiag] imgui_sdl_backend=%d\", sdl_backend_ok ? 1 : 0); std::fflush(stderr);"),
+              ("    ImGui_ImplOpenGL3_Init(\"#version 100\");   // GLES 2 GLSL (host ANGLE backend)", "    const bool gl_backend_ok = ImGui_ImplOpenGL3_Init(\"#version 100\");   // GLES 2 GLSL (host ANGLE backend)\n    std::fprintf(stderr, \"[psxdiag] imgui_gl_backend=%d\", gl_backend_ok ? 1 : 0); std::fflush(stderr);"),
+              ("    launcher_boot_timing_mark(\"rui:imgui_gl_ready\");", "    std::fprintf(stderr, \"[psxdiag] imgui_backends_ready\"); std::fflush(stderr);"),
+              ("    launcher_boot_timing_mark(\"rui:textures_loaded\");", "    std::fprintf(stderr, \"[psxdiag] textures_loaded\"); std::fflush(stderr);"),
+              ("    while ((m->action == LNG_ACTION_NONE && !p->should_quit) ||", "    std::fprintf(stderr, \"[psxdiag] entering_render_loop\"); std::fflush(stderr);\n    while ((m->action == LNG_ACTION_NONE && !p->should_quit) ||"),
+              ("        ImGui::Render();", "        ImGui::Render();\n        if (!first_present_marked) { std::fprintf(stderr, \"[psxdiag] first_imgui_frame_built\"); std::fflush(stderr); }"),
+              ("        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());", "        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());\n        if (!first_present_marked) { std::fprintf(stderr, \"[psxdiag] first_frame_draw_submitted\"); std::fflush(stderr); }"),
+              ("        launcher_platform_present(p);", "        launcher_platform_present(p);\n        if (!first_present_marked) { std::fprintf(stderr, \"[psxdiag] first_frame_presented\"); std::fflush(stderr); }")
           ]
           for old, new in edits:
-              if old not in s:
-                  raise SystemExit("Could not locate launcher diagnostic anchor: " + old[:90])
+              if old not in s: raise SystemExit("Could not locate launcher diagnostic anchor: " + old[:90])
               s = s.replace(old, new, 1)
           p.write_text(s)
           print("Patched iOS launcher with startup/render diagnostics")
