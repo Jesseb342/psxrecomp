@@ -87,7 +87,27 @@ jobs:
                   raise SystemExit("Could not locate launcher_debug.c include marker")
               s = s.replace(marker, marker + chr(10) + include, 1)
               p.write_text(s)
-          print("Patched recomp-ui to use OpenGLES on iOS")
+          # SDL's shared launcher currently requests desktop OpenGL 3.3.
+          # iOS only provides OpenGL ES; request an ES 3.0 context there.
+          p = Path("recomp-ui/src/common/launcher_platform_sdl3.c")
+          s = p.read_text()
+          old = """    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+              SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+              SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);"""
+          new = """#if defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__)
+              SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+              SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+              SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+          #else
+              SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+              SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+              SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+          #endif"""
+          if old not in s:
+              raise SystemExit("Could not locate SDL3 launcher GL context attributes")
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+          print("Patched recomp-ui to use OpenGLES 3.0 contexts on iOS")
           PY
 
       - name: Select Xcode
