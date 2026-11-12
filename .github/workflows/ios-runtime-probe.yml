@@ -211,6 +211,53 @@ jobs:
           s = s.replace(old, new, 1)
           p.write_text(s)
 
+          # Add an unmistakable foreground test panel and inspect ImGui draw commands.
+          # This distinguishes a dark-but-rendering launcher from missing UI/text rendering.
+          p = Path("recomp-ui/src/common/backends/imgui/launcher_imgui.cpp")
+          s = p.read_text()
+          old = "    draw_footer(m, th, footer_h);"
+          new = """    draw_footer(m, th, footer_h);
+              {
+                  ImDrawList* psx_fg = ImGui::GetForegroundDrawList();
+                  psx_fg->AddRectFilled(ImVec2(10, 10), ImVec2(310, 66),
+                                         IM_COL32(220, 0, 180, 255), 8.0f);
+                  psx_fg->AddText(ImGui::GetFont(), 22.0f, ImVec2(20, 25),
+                                  IM_COL32(255, 255, 255, 255),
+                                  "PSXRECOMP RENDER TEST");
+              }"""
+          if old not in s:
+              raise SystemExit("Could not locate launcher footer for render test overlay")
+          s = s.replace(old, new, 1)
+          old = "        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());"
+          new = """        if (!first_present_marked) {
+              ImDrawData* psx_dd = ImGui::GetDrawData();
+              int psx_cmds = 0;
+              for (int li = 0; li < psx_dd->CmdListsCount; ++li) {
+                  const ImDrawList* dl = psx_dd->CmdLists[li];
+                  for (int ci = 0; ci < dl->CmdBuffer.Size; ++ci) {
+                      const ImDrawCmd& cmd = dl->CmdBuffer[ci];
+                      if (cmd.UserCallback) continue;
+                      if (psx_cmds < 16) {
+                          std::fprintf(stderr,
+                              "[psxdiag] draw_cmd list=%d cmd=%d elems=%u tex=%p clip=%.1f,%.1f,%.1f,%.1f\\n",
+                              li, ci, cmd.ElemCount, (void*)cmd.TextureId,
+                              cmd.ClipRect.x, cmd.ClipRect.y,
+                              cmd.ClipRect.z, cmd.ClipRect.w);
+                      }
+                      ++psx_cmds;
+                  }
+              }
+              std::fprintf(stderr, "[psxdiag] draw_commands lists=%d commands=%d vertices=%d indices=%d\\n",
+                           psx_dd->CmdListsCount, psx_cmds,
+                           psx_dd->TotalVtxCount, psx_dd->TotalIdxCount);
+              std::fflush(stderr);
+          }
+          ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());"""
+          if old not in s:
+              raise SystemExit("Could not locate ImGui draw submission for command diagnostics")
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+
           print("Patched iOS launcher with startup/render diagnostics")
 
           PY
