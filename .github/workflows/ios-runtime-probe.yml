@@ -381,7 +381,8 @@ jobs:
                   }
                   fflush(stderr);
               }'''
-          raise SystemExit(f"Expected one UIKit present call, found {s.count(old)}")
+          if s.count(old) != 1:
+              raise SystemExit(f"Expected one UIKit present call, found {s.count(old)}")
           s = s.replace(old, new, 1)
           if '#include <stdio.h>' not in s:
               s = s.replace('#include "SDL_internal.h"', '#include "SDL_internal.h"' + chr(10) + '#include <stdio.h>', 1)
