@@ -334,8 +334,53 @@ jobs:
                   psx_screen.nativeBounds.size.width, psx_screen.nativeBounds.size.height,
                   psx_screen.scale, psx_screen.nativeScale, self.contentScaleFactor,
                   (long)[UIApplication sharedApplication].applicationState);
-              fflush(stderr);'''
-          if s.count(old) != 1:
+              fflush(stderr);
+              static BOOL psx_hierarchy_logged = NO;
+              if (!psx_hierarchy_logged) {
+                  psx_hierarchy_logged = YES;
+                  UIWindow *psx_window = self.window;
+                  UIWindowScene *psx_scene = psx_window.windowScene;
+                  fprintf(stderr, "[psxdiag] own_window key=%d hidden=%d alpha=%.2f level=%.1f frame=%.1fx%.1f root=%s scene_state=%ld screen_match=%d\\n",
+                      psx_window.isKeyWindow ? 1 : 0, psx_window.hidden ? 1 : 0,
+                      psx_window.alpha, psx_window.windowLevel,
+                      psx_window.frame.size.width, psx_window.frame.size.height,
+                      psx_window.rootViewController ? class_getName([psx_window.rootViewController class]) : "(null)",
+                      psx_scene ? (long)psx_scene.activationState : -1L,
+                      psx_window.screen == psx_screen ? 1 : 0);
+                  NSArray<UIWindow *> *psx_windows = [UIApplication sharedApplication].windows;
+                  fprintf(stderr, "[psxdiag] app_windows count=%lu\\n", (unsigned long)psx_windows.count);
+                  for (NSUInteger wi = 0; wi < psx_windows.count; ++wi) {
+                      UIWindow *w = psx_windows[wi];
+                      UIWindowScene *ws = w.windowScene;
+                      fprintf(stderr, "[psxdiag] app_window index=%lu class=%s key=%d hidden=%d alpha=%.2f level=%.1f frame=%.1fx%.1f root=%s scene_state=%ld screen_match=%d\\n",
+                          (unsigned long)wi, class_getName([w class]), w.isKeyWindow ? 1 : 0,
+                          w.hidden ? 1 : 0, w.alpha, w.windowLevel,
+                          w.frame.size.width, w.frame.size.height,
+                          w.rootViewController ? class_getName([w.rootViewController class]) : "(null)",
+                          ws ? (long)ws.activationState : -1L,
+                          w.screen == psx_screen ? 1 : 0);
+                  }
+                  UIView *psx_parent = self;
+                  for (int depth = 0; psx_parent && depth < 6; ++depth) {
+                      fprintf(stderr, "[psxdiag] view_chain depth=%d class=%s hidden=%d alpha=%.2f frame=%.1fx%.1f bounds=%.1fx%.1f z=%.2f subviews=%lu\\n",
+                          depth, class_getName([psx_parent class]), psx_parent.hidden ? 1 : 0,
+                          psx_parent.alpha, psx_parent.frame.size.width, psx_parent.frame.size.height,
+                          psx_parent.bounds.size.width, psx_parent.bounds.size.height,
+                          psx_parent.layer.zPosition, (unsigned long)psx_parent.subviews.count);
+                      if (depth == 0 && psx_parent.superview) {
+                          for (NSUInteger vi = 0; vi < psx_parent.superview.subviews.count; ++vi) {
+                              UIView *sibling = psx_parent.superview.subviews[vi];
+                              fprintf(stderr, "[psxdiag] sibling index=%lu class=%s hidden=%d alpha=%.2f frame=%.1fx%.1f z=%.2f\\n",
+                                  (unsigned long)vi, class_getName([sibling class]),
+                                  sibling.hidden ? 1 : 0, sibling.alpha,
+                                  sibling.frame.size.width, sibling.frame.size.height,
+                                  sibling.layer.zPosition);
+                          }
+                      }
+                      psx_parent = psx_parent.superview;
+                  }
+                  fflush(stderr);
+              }'''
               raise SystemExit(f"Expected one UIKit present call, found {s.count(old)}")
           s = s.replace(old, new, 1)
           if '#include <stdio.h>' not in s:
