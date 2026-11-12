@@ -1,0 +1,43 @@
+workflows:
+  psxrecomp-ios-arm64:
+    name: PSXRecomp iOS ARM64 (unsigned)
+    instance_type: mac_mini_m2
+    max_build_duration: 120
+    environment:
+      xcode: latest
+    scripts:
+      - name: Run the existing iOS build recipe
+        script: |
+          set -euo pipefail
+
+          # Codemagic checks out the repository before running scripts. Reuse
+          # the existing GitHub Actions shell steps so the two build paths do
+          # not drift apart while this alternate runner is being introduced.
+          export GITHUB_WORKSPACE="$CM_BUILD_DIR"
+
+          ruby <<'RUBY'
+          require 'yaml'
+
+          workflow_path = File.join(ENV.fetch('CM_BUILD_DIR'), '.github/workflows/ios-runtime-probe.yml')
+          workflow = YAML.load_file(workflow_path)
+          job = workflow.fetch('jobs').fetch('ios-arm64-runtime')
+
+          job.fetch('steps').each do |step|
+            next unless step.key?('run')
+
+            name = step['name'] || 'Unnamed build step'
+            puts "\n========== #{name} =========="
+            $stdout.flush
+
+            success = system('/bin/bash', '-eo', 'pipefail', '-c', step.fetch('run'))
+            unless success
+              status = $?.exitstatus
+              abort "Build step failed: #{name} (exit #{status || 'signal'})"
+            end
+          end
+          RUBY
+    artifacts:
+      - PSXRecomp-unsigned.ipa
+      - ios-configure.log
+      - ios-build.log
+      - build-ios/CMakeCache.txt
