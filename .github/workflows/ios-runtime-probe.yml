@@ -344,7 +344,7 @@ jobs:
                       psx_window.isKeyWindow ? 1 : 0, psx_window.hidden ? 1 : 0,
                       psx_window.alpha, psx_window.windowLevel,
                       psx_window.frame.size.width, psx_window.frame.size.height,
-                      psx_window.rootViewController ? class_getName([psx_window.rootViewController class]) : "(null)",
+                      psx_window.rootViewController ? NSStringFromClass([psx_window.rootViewController class]).UTF8String : "(null)",
                       psx_scene ? (long)psx_scene.activationState : -1L,
                       psx_window.screen == psx_screen ? 1 : 0);
                   NSArray<UIWindow *> *psx_windows = [UIApplication sharedApplication].windows;
@@ -353,17 +353,17 @@ jobs:
                       UIWindow *w = psx_windows[wi];
                       UIWindowScene *ws = w.windowScene;
                       fprintf(stderr, "[psxdiag] app_window index=%lu class=%s key=%d hidden=%d alpha=%.2f level=%.1f frame=%.1fx%.1f root=%s scene_state=%ld screen_match=%d\\n",
-                          (unsigned long)wi, class_getName([w class]), w.isKeyWindow ? 1 : 0,
+                          (unsigned long)wi, NSStringFromClass([w class]).UTF8String, w.isKeyWindow ? 1 : 0,
                           w.hidden ? 1 : 0, w.alpha, w.windowLevel,
                           w.frame.size.width, w.frame.size.height,
-                          w.rootViewController ? class_getName([w.rootViewController class]) : "(null)",
+                          w.rootViewController ? NSStringFromClass([w.rootViewController class]).UTF8String : "(null)",
                           ws ? (long)ws.activationState : -1L,
                           w.screen == psx_screen ? 1 : 0);
                   }
                   UIView *psx_parent = self;
                   for (int depth = 0; psx_parent && depth < 6; ++depth) {
                       fprintf(stderr, "[psxdiag] view_chain depth=%d class=%s hidden=%d alpha=%.2f frame=%.1fx%.1f bounds=%.1fx%.1f z=%.2f subviews=%lu\\n",
-                          depth, class_getName([psx_parent class]), psx_parent.hidden ? 1 : 0,
+                          depth, NSStringFromClass([psx_parent class]).UTF8String, psx_parent.hidden ? 1 : 0,
                           psx_parent.alpha, psx_parent.frame.size.width, psx_parent.frame.size.height,
                           psx_parent.bounds.size.width, psx_parent.bounds.size.height,
                           psx_parent.layer.zPosition, (unsigned long)psx_parent.subviews.count);
@@ -371,7 +371,7 @@ jobs:
                           for (NSUInteger vi = 0; vi < psx_parent.superview.subviews.count; ++vi) {
                               UIView *sibling = psx_parent.superview.subviews[vi];
                               fprintf(stderr, "[psxdiag] sibling index=%lu class=%s hidden=%d alpha=%.2f frame=%.1fx%.1f z=%.2f\\n",
-                                  (unsigned long)vi, class_getName([sibling class]),
+                                  (unsigned long)vi, NSStringFromClass([sibling class]).UTF8String,
                                   sibling.hidden ? 1 : 0, sibling.alpha,
                                   sibling.frame.size.width, sibling.frame.size.height,
                                   sibling.layer.zPosition);
