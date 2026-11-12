@@ -166,6 +166,51 @@ jobs:
               if old not in s: raise SystemExit("Could not locate launcher diagnostic anchor: " + old[:90])
               s = s.replace(old, new, 1)
           p.write_text(s)
+          # Report the actual font texture and the model state used to build the first frame.
+          p = Path("recomp-ui/src/common/backends/imgui/launcher_imgui.cpp")
+          s = p.read_text()
+          old = "    ImGui_ImplOpenGL3_DestroyFontsTexture();\n    ImGui_ImplOpenGL3_CreateFontsTexture();"
+          new = """    ImGui_ImplOpenGL3_DestroyFontsTexture();
+              const bool psx_font_texture_ok = ImGui_ImplOpenGL3_CreateFontsTexture();
+              std::fprintf(stderr, "[psxdiag] font_atlas loaded=%d size=%dx%d fonts=%d texture_ok=%d texid=%p gl_error=0x%x\\n",
+                           loaded ? 1 : 0, io.Fonts->TexWidth, io.Fonts->TexHeight,
+                           io.Fonts->Fonts.Size, psx_font_texture_ok ? 1 : 0,
+                           (void*)io.Fonts->TexID, (unsigned)glGetError());
+              std::fflush(stderr);
+              if (!psx_font_texture_ok) {
+                  io.Fonts->Clear();
+                  ImFontConfig fallback_cfg;
+                  io.Fonts->AddFontDefault(&fallback_cfg);
+                  io.Fonts->Build();
+                  const bool fallback_ok = ImGui_ImplOpenGL3_CreateFontsTexture();
+                  std::fprintf(stderr, "[psxdiag] font_atlas_fallback size=%dx%d texture_ok=%d texid=%p gl_error=0x%x\\n",
+                               io.Fonts->TexWidth, io.Fonts->TexHeight,
+                               fallback_ok ? 1 : 0, (void*)io.Fonts->TexID,
+                               (unsigned)glGetError());
+                  std::fflush(stderr);
+              }"""
+          if old not in s:
+              raise SystemExit("Could not locate ImGui font texture creation block")
+          s = s.replace(old, new, 1)
+          old = "void draw_ui(LauncherModel* m, const LauncherTheme& th, int logical_w, int logical_h) {\n    ImGuiViewport* vp = ImGui::GetMainViewport();"
+          new = """void draw_ui(LauncherModel* m, const LauncherTheme& th, int logical_w, int logical_h) {
+              static bool psx_ui_state_logged = false;
+              if (!psx_ui_state_logged) {
+                  psx_ui_state_logged = true;
+                  std::fprintf(stderr, "[psxdiag] ui_state view=%d game=%s platform=%s profile=%p logical=%dx%d font=%p atlas=%dx%d texid=%p\\n",
+                               (int)m->view, m->game_name ? m->game_name : "(null)",
+                               m->platform ? m->platform : "(null)", m->profile,
+                               logical_w, logical_h, (void*)ImGui::GetFont(),
+                               ImGui::GetIO().Fonts->TexWidth, ImGui::GetIO().Fonts->TexHeight,
+                               (void*)ImGui::GetIO().Fonts->TexID);
+                  std::fflush(stderr);
+              }
+              ImGuiViewport* vp = ImGui::GetMainViewport();"""
+          if old not in s:
+              raise SystemExit("Could not locate draw_ui entry")
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+
           print("Patched iOS launcher with startup/render diagnostics")
 
           PY
@@ -234,9 +279,13 @@ jobs:
           s = p.read_text()
           old = '[context presentRenderbuffer:GL_RENDERBUFFER];'
           new = '''BOOL psx_present_ok = [context presentRenderbuffer:GL_RENDERBUFFER];
-              fprintf(stderr, "[psxdiag] uikit_present result=%d view_window=%d hidden=%d alpha=%.2f frame=%.1fx%.1f bounds=%.1fx%.1f app_state=%ld\\n",
+              UIScreen *psx_screen = self.window.screen ?: [UIScreen mainScreen];
+              fprintf(stderr, "[psxdiag] uikit_present result=%d view_window=%d hidden=%d alpha=%.2f frame=%.1fx%.1f bounds=%.1fx%.1f screen=%.1fx%.1f native=%.1fx%.1f scale=%.3f native_scale=%.3f content_scale=%.3f app_state=%ld\\n",
                   psx_present_ok ? 1 : 0, self.window != nil, self.hidden ? 1 : 0, self.alpha,
                   self.frame.size.width, self.frame.size.height, self.bounds.size.width, self.bounds.size.height,
+                  psx_screen.bounds.size.width, psx_screen.bounds.size.height,
+                  psx_screen.nativeBounds.size.width, psx_screen.nativeBounds.size.height,
+                  psx_screen.scale, psx_screen.nativeScale, self.contentScaleFactor,
                   (long)[UIApplication sharedApplication].applicationState);
               fflush(stderr);'''
           if s.count(old) != 1:
