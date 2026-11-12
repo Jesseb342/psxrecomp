@@ -325,7 +325,16 @@ jobs:
           p = Path(sys.argv[1])
           s = p.read_text()
           old = '[context presentRenderbuffer:GL_RENDERBUFFER];'
-          new = '''BOOL psx_present_ok = [context presentRenderbuffer:GL_RENDERBUFFER];
+          new = '''GLint psx_fbo = 0, psx_rb = 0;
+              GLubyte psx_pixel[4] = {0, 0, 0, 0};
+              glGetIntegerv(GL_FRAMEBUFFER_BINDING, &psx_fbo);
+              glGetIntegerv(GL_RENDERBUFFER_BINDING, &psx_rb);
+              glReadPixels(self.backingWidth / 2, self.backingHeight / 2, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, psx_pixel);
+              fprintf(stderr, "[psxdiag] before_present current=%d fbo=%d drawable_fbo=%u rb=%d drawable_rb=%u size=%dx%d center=%u,%u,%u,%u gl_error=0x%x\\n",
+                  [EAGLContext currentContext] == context ? 1 : 0, psx_fbo, self.drawableFramebuffer,
+                  psx_rb, self.drawableRenderbuffer, self.backingWidth, self.backingHeight,
+                  psx_pixel[0], psx_pixel[1], psx_pixel[2], psx_pixel[3], (unsigned)glGetError());
+              BOOL psx_present_ok = [context presentRenderbuffer:GL_RENDERBUFFER];
               UIScreen *psx_screen = self.window.screen ?: [UIScreen mainScreen];
               fprintf(stderr, "[psxdiag] uikit_present result=%d view_window=%d hidden=%d alpha=%.2f frame=%.1fx%.1f bounds=%.1fx%.1f screen=%.1fx%.1f native=%.1fx%.1f scale=%.3f native_scale=%.3f content_scale=%.3f app_state=%ld\\n",
                   psx_present_ok ? 1 : 0, self.window != nil, self.hidden ? 1 : 0, self.alpha,
