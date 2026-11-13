@@ -430,7 +430,7 @@ jobs:
           psx_probe.layer.zPosition = 100000.0;
           UILabel *psx_label = [[UILabel alloc] initWithFrame:psx_probe.bounds];
           psx_label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-          psx_label.text = @\\"WINDOW-LEVEL UIKit TEST\\";
+          psx_label.text = @"WINDOW-LEVEL UIKit TEST";
           psx_label.textColor = [UIColor whiteColor];
           psx_label.font = [UIFont boldSystemFontOfSize:17.0];
           psx_label.textAlignment = NSTextAlignmentCenter;
@@ -439,20 +439,20 @@ jobs:
               [psx_window bringSubviewToFront:psx_probe];
           }
           UIScene *psx_scene = psx_window.windowScene;
-          fprintf(stderr, \\"[psxdiag] window_level_probe added=%d key=%d hidden=%d alpha=%.2f level=%.1f bounds=%.1fx%.1f scene=%s scene_state=%ld scene_windows=%lu\\\\n\\",
+          fprintf(stderr, "[psxdiag] window_level_probe added=%d key=%d hidden=%d alpha=%.2f level=%.1f bounds=%.1fx%.1f scene=%s scene_state=%ld scene_windows=%lu\\\\n",
                   psx_window != nil, psx_window.isKeyWindow, psx_window.hidden,
                   psx_window.alpha, psx_window.windowLevel,
                   psx_window.bounds.size.width, psx_window.bounds.size.height,
-                  psx_scene ? NSStringFromClass([psx_scene class]).UTF8String : \\"none\\",
+                  psx_scene ? NSStringFromClass([psx_scene class]).UTF8String : "none",
                   (long)psx_scene.activationState,
                   (unsigned long)[(UIWindowScene *)psx_scene windows].count);
           if (psx_scene && [psx_scene isKindOfClass:[UIWindowScene class]]) {
               for (UIWindow *w in ((UIWindowScene *)psx_scene).windows) {
-                  fprintf(stderr, \\"[psxdiag] scene_window class=%s key=%d hidden=%d alpha=%.2f level=%.1f frame=%.1fx%.1f root=%s\\\\n\\",
+                  fprintf(stderr, "[psxdiag] scene_window class=%s key=%d hidden=%d alpha=%.2f level=%.1f frame=%.1fx%.1f root=%s\\\\n",
                       NSStringFromClass([w class]).UTF8String, w.isKeyWindow,
                       w.hidden, w.alpha, w.windowLevel, w.frame.size.width,
                       w.frame.size.height,
-                      w.rootViewController ? NSStringFromClass([w.rootViewController class]).UTF8String : \\"none\\");
+                      w.rootViewController ? NSStringFromClass([w.rootViewController class]).UTF8String : "none");
               }
           }
           fflush(stderr);
