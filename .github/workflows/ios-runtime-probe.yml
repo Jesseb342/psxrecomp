@@ -399,6 +399,54 @@ jobs:
           print(f"Instrumented UIKit presentRenderbuffer in {p}")
           PY
 
+      - name: Add native UIKit overlay probe
+        run: |
+          set -euo pipefail
+          SDL_GL_CREATE="$(find build-ios -type f -path '*/src/video/uikit/SDL_uikitopengles.m' -print -quit)"
+          if [ -z "$SDL_GL_CREATE" ]; then
+            echo "::error::Could not locate SDL UIKit OpenGL context source"
+            find build-ios -iname '*uikit*opengl*' -print || true
+            exit 1
+          fi
+          python3 - "$SDL_GL_CREATE" <<'PY'
+          from pathlib import Path
+          import sys
+          p = Path(sys.argv[1])
+          s = p.read_text()
+          anchor = """        if (!UIKit_GL_MakeCurrent(_this, window, (__bridge SDL_GLContext)context)) {
+              UIKit_GL_DestroyContext(_this, (SDL_GLContext)CFBridgingRetain(context));
+              return NULL;
+          }
+          """
+          overlay = anchor + """        /* Native UIKit isolation probe: this view is independent of the
+           * EAGL drawable and is placed above SDL's GL view in its UIKit parent. */
+          UIView *psx_host = view.superview ? view.superview : view;
+          UIView *psx_probe = [[UIView alloc] initWithFrame:CGRectMake(12.0, 48.0, 296.0, 76.0)];
+          psx_probe.backgroundColor = [UIColor magentaColor];
+          psx_probe.opaque = YES;
+          psx_probe.alpha = 1.0;
+          psx_probe.userInteractionEnabled = NO;
+          psx_probe.layer.zPosition = 10000.0;
+          UILabel *psx_label = [[UILabel alloc] initWithFrame:psx_probe.bounds];
+          psx_label.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+          psx_label.text = @\"NATIVE UIKit VIEW TEST\";
+          psx_label.textColor = [UIColor whiteColor];
+          psx_label.font = [UIFont boldSystemFontOfSize:17.0];
+          psx_label.textAlignment = NSTextAlignmentCenter;
+          [psx_probe addSubview:psx_label];
+          [psx_host addSubview:psx_probe];
+          [psx_host bringSubviewToFront:psx_probe];
+          fprintf(stderr, \"[psxdiag] native_uikit_overlay_added parent=%s window=%d subviews=%lu\\n\",
+                  NSStringFromClass([psx_host class]).UTF8String, psx_probe.window != nil,
+                  (unsigned long)psx_host.subviews.count);
+          fflush(stderr);
+          """
+          if s.count(anchor) != 1:
+              raise SystemExit(f"Expected one UIKit context attachment block, found {s.count(anchor)}")
+          p.write_text(s.replace(anchor, overlay, 1))
+          print(f"Added native UIKit overlay probe to {p}")
+          PY
+
       - name: Compile iOS runtime
         run: |
           set -o pipefail
