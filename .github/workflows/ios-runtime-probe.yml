@@ -456,7 +456,7 @@ jobs:
               }
           }
           fflush(stderr);
-          """          """
+          """
           if s.count(anchor) != 1:
               raise SystemExit(f"Expected one UIKit context attachment block, found {s.count(anchor)}")
           p.write_text(s.replace(anchor, overlay, 1))
