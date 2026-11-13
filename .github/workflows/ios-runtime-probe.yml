@@ -414,9 +414,9 @@ jobs:
           p = Path(sys.argv[1])
           s = p.read_text()
           anchor = """        if (!UIKit_GL_MakeCurrent(_this, window, (__bridge SDL_GLContext)context)) {
-              UIKit_GL_DestroyContext(_this, (SDL_GLContext)CFBridgingRetain(context));
-              return NULL;
-          }
+                      UIKit_GL_DestroyContext(_this, (SDL_GLContext)CFBridgingRetain(context));
+                      return NULL;
+                  }
           """
           overlay = anchor + """        /* Native UIKit isolation probe: this view is independent of the
            * EAGL drawable and is placed above SDL's GL view in its UIKit parent. */
