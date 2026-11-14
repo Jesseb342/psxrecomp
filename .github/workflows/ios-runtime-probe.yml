@@ -434,6 +434,7 @@ jobs:
           psx_label.textColor = [UIColor whiteColor];
           psx_label.font = [UIFont boldSystemFontOfSize:17.0];
           psx_label.textAlignment = NSTextAlignmentCenter;
+          [psx_probe addSubview:psx_label];
           if (psx_window) {
               [psx_window addSubview:psx_probe];
               [psx_window bringSubviewToFront:psx_probe];
